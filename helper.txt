@@ -1,0 +1,12 @@
+https://www.tensorflow.org/install/pip
+
+TENSORFLOW official tutorial:
+https://www.tensorflow.org/tutorials/
+
+
+Seems to be the most understandable tutorial that makes sense and aligns with what we want to do:
+https://medium.freecodecamp.org/making-your-own-face-recognition-system-29a8e728107c
+
+
+Save our keras model after loaded with weights:
+https://stackoverflow.com/questions/47266383/save-and-load-weights-in-keras
