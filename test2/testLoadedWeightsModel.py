@@ -46,11 +46,30 @@ def prepare_database():
                 path = os.path.join(root, file)
                 label = os.path.basename(root).replace(" ", "-").lower()
                 idolNameDirPath = os.path.dirname(path)
-                identity = os.path.basename(idolNameDirPath)
-                print("Training: " + identity)
-                #TODO: might want to preprocess the image such that it centers on the face.
-                database[identity] = img_path_to_encoding(path, FRmodel)
-                
+                identity = os.path.basename(idolNameDirPath)                
+                print("Training: " + identity + " --path: " + path)
+
+                #center the face.
+                face = getFace(path)
+
+                #TODO: we might want to accumulate the encodings of multiple pictures
+                if not identity in database:                
+                    database[identity] = [img_to_encoding(face, FRmodel)]
+                else:
+                    database[identity].append(img_to_encoding(face, FRmodel))
+
+    #iterate through each value (list) of each key and calculate the average encoding value.
+    for (id, encList) in database.items():
+        meanEnc = encList[0]
+        if len(encList) <= 1:
+            database[id] = meanEnc
+            continue
+        
+        for  i in range (1, len(encList)):
+            meanEnc += encList[i]
+        meanEnc = meanEnc / len(encList)
+        
+        database[id] = meanEnc
     
     return database
 
@@ -76,21 +95,37 @@ def who_is_it(image, database, model):
         return identity
 
 def getFace(imgPath):
+    roiImg = None
     img = cv2.imread(imgPath)
     gray = cv2.cvtColor(img.copy(), cv2.COLOR_BGR2GRAY)
 
     faces = faceDetector.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5)
-    print(len(faces))
-    for (x, y, w, h) in faces:
-        roiGray = gray[y:y+h, x:x+w]
-        grayCopy = gray.copy()
-        cv2.rectangle(grayCopy, (x, y), (x+w, y+h), (255,0,0), 1)
-        cv2.imshow("get face of prediction", grayCopy)
-        cv2.waitKey(0)        
-        roiImg = img[y:y+h, x:x+w]
-        return roiImg
+    print(str(len(faces)) + " --path: "  + imgPath)
+    x, y, w, h = getLargestFace(faces, img)
 
-    return None
+    
+    roiGray = gray[y:y+h, x:x+w]
+    grayCopy = gray.copy()
+    cv2.rectangle(grayCopy, (x, y), (x+w, y+h), (255,0,0), 1)
+    cv2.imshow("get face of prediction", grayCopy)
+    cv2.waitKey(0)        
+    roiImg = img[y:y+h, x:x+w]
+    return roiImg
+
+
+def getLargestFace(faces, img):
+    largestArea = 0
+    largestFace = None
+    for (x, y, w, h) in faces:
+        roi = img[y:y+h, x:x+w]
+        height, width = roi.shape[:2]
+        area = height * width
+        if area > largestArea:
+            largestArea = area
+            largestFace = (x, y, w, h)
+    return largestFace
+
+        
     
 testImgDir = "testAgainstImages/"
 print("Preparing database--")
@@ -98,12 +133,13 @@ db = prepare_database()
 print("Database prepared--")
 
 
-for i in range (4):
+for i in range (7):
     filePath = testImgDir + str(i+1) + ".jpg"
     face = getFace(filePath)
     print("--Recognizing a face:")
     print(who_is_it(face, db, FRmodel))
-
+    
+'''
 for i in range (2):
     filePath = testImgDir + str(i+5) + ".png"
     face = getFace(filePath)
@@ -112,3 +148,4 @@ for i in range (2):
           
 
 
+'''
